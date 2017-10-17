@@ -73,7 +73,7 @@ var GenericDatasource = exports.GenericDatasource = function () {
                     "Topic": "",
                     "BeginTime": parseInt(options.range.from._d.getTime() / 1000),
                     "EndTime": parseInt(options.range.to._d.getTime() / 1000),
-                    "Query": target.query,
+                    "Query": _this.templateSrv.replace(target.query, {}, 'glob'),
                     "Reverse": "false",
                     "Lines": "100",
                     "Offset": "0"
@@ -92,16 +92,41 @@ var GenericDatasource = exports.GenericDatasource = function () {
                     }, []);
                     return result;
                 }).then(function (result) {
+
                     console.log("test");
                     var resResult = [];
+                    var table = false;
+
+                    if (result.time_col === "pie") {
+                        (0, _lodash2.default)(result.data.GetData.Data, [result.ycol[0]]).forEach(function (data) {
+                            var _time = data["__time__"];
+                            var time = parseInt(_time) * 1000;
+                            var value = parseInt(data[result.ycol[1]]);
+                            resResult.push({
+                                "target": data[result.ycol[0]],
+                                "datapoints": [[value, time]]
+                            });
+                        });
+                        return resResult;
+                    }
+                    if (result.time_col === "table") {
+                        table = true;
+                    }
                     (0, _lodash2.default)(result.ycol).forEach(function (col) {
                         var datapoints = [];
-
+                        var count = 0;
                         _lodash2.default.sortBy(result.data.GetData.Data, [result.time_col]).forEach(function (data) {
                             var _time = data[result.time_col];
-                            var time = parseInt(_time) * 1000;
-                            var value = parseInt(data[col]);
-                            datapoints.push([value, time]);
+                            if (table) {
+                                var time = count;
+                                count -= 1;
+                                var value = data[col];
+                                datapoints.push([value, time]);
+                            } else {
+                                var _time2 = parseFloat(_time) * 1000;
+                                var _value = parseFloat(data[col]);
+                                datapoints.push([_value, _time2]);
+                            }
                         });
                         resResult.push({
                             "target": col,

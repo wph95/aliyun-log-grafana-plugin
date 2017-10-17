@@ -52,7 +52,7 @@ export class GenericDatasource {
                 "Topic": "",
                 "BeginTime": parseInt(options.range.from._d.getTime() / 1000),
                 "EndTime": parseInt(options.range.to._d.getTime() / 1000),
-                "Query": target.query,
+                "Query": this.templateSrv.replace(target.query, {}, 'glob'),
                 "Reverse": "false",
                 "Lines": "100",
                 "Offset": "0"
@@ -73,21 +73,51 @@ export class GenericDatasource {
                     return result
                 })
                 .then(result => {
+
                     console.log("test")
                     let resResult = []
+                    let table = false
+
+                    if (result.time_col === "pie") {
+                        _(result.data.GetData.Data, [result.ycol[0]]).forEach(data => {
+                            const _time = data["__time__"]
+                            const time = parseInt(_time) * 1000
+                            const value = parseInt(data[result.ycol[1]])
+                            resResult.push({
+                                "target": data[result.ycol[0]],
+                                "datapoints": [[value, time]]
+                            })
+
+                        })
+                        return resResult
+                    }
+                    if (result.time_col === "table") {
+                        table = true
+                    }
                     _(result.ycol).forEach(col => {
                         let datapoints = []
-
+                        let count = 0
                         _.sortBy(result.data.GetData.Data, [result.time_col]).forEach(data => {
                             const _time = data[result.time_col]
-                            const time = parseInt(_time) * 1000
-                            const value = parseInt(data[col])
-                            datapoints.push([value, time])
+                            if (table) {
+                                const time = count
+                                count -= 1
+                                const value = data[col]
+                                datapoints.push([value, time])
+                            }
+                            else {
+                                const time = parseFloat(_time) * 1000
+                                const value = parseFloat(data[col])
+                                datapoints.push([value, time])
+
+                            }
+
                         })
                         resResult.push({
                             "target": col,
                             "datapoints": datapoints
                         })
+
                     })
                     return resResult
 
